@@ -1,0 +1,511 @@
+---
+title: "<span style='font-size:125%;color:#CA1010'>Edul@b</span style='color:#CA1010'>"
+subtitle: "Comentaris de 5è tots els excels 1Ronda vs 2Ronda"
+author:
+  - Marcos Montoro^[telecomontoro@uoc.edu] - Estel Paloma Cisa^[epaloma@uoc.edu]
+
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+    
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0("../Informe Comentaris/",format(Sys.Date(),"%Y-%m-%d"),"_Informe_Comentaris 5e tot 1Ronda vs 2Ronda.pdf")) })
+
+
+
+
+---
+
+
+```{css sidenote, echo = FALSE}
+.main-container {
+  margin-left: 50px;       # 0px = max. to the left (with default padding)
+  margin-right: 50px;       
+}
+}
+#TOC {
+  z-index: 2;
+ }
+ 
+ 
+ <style>
+#my-table {
+  position: fixed;
+  top: 100px;
+  left: 100px;
+}
+</style>
+ 
+ 
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = F,
+                      warning = F)
+#llibreries
+
+if(require("pacman")=="FALSE"){
+  install.packages('pacman')
+  library('pacman')
+  pacman::p_load(magrittr,readr,tokenizers,lubridate,tidyr,tidyverse,dplyr,corrpnlot,ggplot2,data.table,ggpubr,devtools,gplots) 
+} else {
+  library('pacman')
+  pacman::p_load(magrittr,readr,lubridate,tokenizers,tidyr,tidyverse,dplyr,corrplot,ggplot2,data.table,ggpubr,devtools,gplots) 
+}
+p_loaded()  
+
+options(scipen=999)
+
+library(tidyverse) # Inclou dplyr, ggplot2 i altres llibreries
+library(tidytext) # Llibreria per a l'anàlisi de text
+library(stopwords) # Llibreria de stopwords
+library(sentimentr)
+library(readxl)
+library(xlsx)
+library(wordcloud)
+
+stop_words <- read.table("https://raw.githubusercontent.com/Alir3z4/stop-words/master/catalan.txt",
+                         header = FALSE, stringsAsFactors = FALSE)
+colnames(stop_words) <- "word"
+
+stop_words <- stop_words %>% 
+  mutate(word = tolower(word)) %>% 
+  pull()
+
+```
+
+
+
+
+
+```{r, results='asis'}
+
+cat("\\newpage")
+
+```
+
+
+
+# **Pla de recerca Doctorat industrial Estel Paloma i Cisa**
+
+![](../Imatges/edulab_blog_960x115.jpg){width=800 height=80}
+
+
+Model per a l’avaluació del desenvolupament de la competència emprenedora per al foment de la sostenibilitat a l'educació obligatòria i postobligatòria
+
+
+
+# Teoria
+
+- Carregar les llibreries necessàries per a l'anàlisi de text.
+- Convertir els comentaris a minúscules.
+- Separar els comentaris en paraules i afegir-les a una nova columna del data frame.
+- Eliminar les paraules no significatives per a l'anàlisi, com ara articles, preposicions, etc. (les anomenades "stopwords").
+- Comptar la freqüència de cada paraula:
+- Visualitzar les paraules més freqüents amb ggplot2.
+
+----------------------------------
+Aquest treball es desenvolupa amb el software estadístic **R-Studio** versió 4.2.2
+----------------------------------
+
+
+```{r, results='asis'}
+
+cat("\\newpage")
+
+```
+
+----------------------------------
+
+# Resum Projecte
+
+Tenim 3 excels per carpeta curs que son:
+
+- Idees i oportunitats 1a_2a ronda
+- Recursos 1a_2a Ronda
+- Passar a l_acció 1a_2a Ronda
+
+
+Els ajuntem tot i fem la comparació
+
+----------------------------------
+
+```{r, results='asis'}
+
+cat("\\newpage")
+
+```
+
+# 1r Ronda tot 5è
+
+Còpia Montse 1. 5A Idees i oportunitats 1a_2a ronda.xlsx
+
+
+
+```{r echo=FALSE}
+#5A
+
+# Definim la ruta de la carpeta que conté els fitxers XLSX
+ruta <- "../Data/Còpies Montse 5A"
+
+# Llista de fitxers XLSX a la carpeta
+fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
+
+# Llegim tots els fitxers XLSX amb la funció lapply()
+llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 1))
+
+df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
+df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
+df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
+
+dftotal <- rbind(df1,
+            df2,
+            df3)
+
+dftotal$Comentaris %<>% tolower()
+
+dftotal <- filter(dftotal, !is.na(Comentaris))
+
+
+#5B
+
+# Definim la ruta de la carpeta que conté els fitxers XLSX
+ruta <- "../Data/Còpies Montse 5B"
+
+# Llista de fitxers XLSX a la carpeta
+fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
+
+# Llegim tots els fitxers XLSX amb la funció lapply()
+llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 1))
+
+df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
+df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
+df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
+
+df1 <- rbind(df1,
+            df2,
+            df3)
+
+df1$Comentaris %<>% tolower()
+df1 <- dplyr ::filter(df1, !is.na(Comentaris))
+
+dftotal <- rbind(dftotal, df1)
+
+#5C
+
+# Definim la ruta de la carpeta que conté els fitxers XLSX
+ruta <- "../Data/Còpies Montse 5C"
+
+# Llista de fitxers XLSX a la carpeta
+fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
+
+# Llegim tots els fitxers XLSX amb la funció lapply()
+llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 1))
+
+df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
+df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
+df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
+
+df1 <- rbind(df1,
+            df2,
+            df3)
+
+df1$Comentaris %<>% tolower()
+df1 <- dplyr ::filter(df1, !is.na(Comentaris))
+
+dftotal <- rbind(dftotal, df1)
+
+#5D
+
+# Definim la ruta de la carpeta que conté els fitxers XLSX
+ruta <- "../Data/Còpies Montse 5D"
+
+# Llista de fitxers XLSX a la carpeta
+fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
+
+# Llegim tots els fitxers XLSX amb la funció lapply()
+llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 1))
+
+df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
+df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
+df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
+
+df1 <- rbind(df1,
+            df2,
+            df3)
+
+df1$Comentaris %<>% tolower()
+df1 <- dplyr ::filter(df1, !is.na(Comentaris))
+
+dftotal <- rbind(dftotal, df1)
+
+```
+
+
+## Separar Paraules
+```{r echo=FALSE}
+# Separem els comentaris en paraules i afegim-les a una nova columna del data frame
+df1_words <- dftotal %>%
+  unnest_tokens(word, Comentaris)
+
+# Eliminem les paraules no significatives per a l'anàlisi, com ara articles, preposicions, etc. (les anomenades "stopwords")
+
+df1_words <- df1_words %>% 
+  dplyr ::filter(!word %in% stop_words)
+
+# Contem la freqüència de cada paraula
+word_freq <- df1_words %>%
+  count(word, sort = TRUE)
+
+# Transformem la variable word en un factor ordenat segons la freqüència
+word_freq <- word_freq %>%
+  mutate(word = fct_reorder(word, n))
+
+```
+
+- Número de paraules uniques **`r nrow(word_freq)`**
+
+
+## Paraules mes freqüents
+
+```{r echo=FALSE}
+# Visualitzem les paraules més freqüents amb ggplot2
+ggplot(head(word_freq,15), aes(x = word, y = n)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Montse 5A",
+       x = "", 
+       y = "") +
+  theme(plot.title = element_text(size = 12),         
+        axis.title = element_text(size = 10),         
+        axis.text = element_text(size = 8),         
+        legend.title = element_text(size = 10),         
+        legend.text = element_text(size = 8),         
+        plot.margin = unit(c(1, 1, 1, 1), "cm"),         
+        legend.position = "right",         
+        legend.direction = "vertical")
+
+
+```
+
+## Núvol de paraules
+
+```{r echo=FALSE}
+
+
+
+# Definir els colors
+my_colors <- brewer.pal(n = 8, name = "Dark2")
+
+# Crear el núvol de paraules amb colors
+wordcloud(words = word_freq$word, 
+          freq = word_freq$n, 
+          max.words = 50, 
+          random.order = FALSE,
+          colors = my_colors)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r, results='asis'}
+
+cat("\\newpage")
+
+```
+
+----------------------------------
+
+# 2r Ronda tot 5è
+
+Còpia Montse 1. 5A Idees i oportunitats 1a_2a ronda.xlsx
+
+
+
+```{r echo=FALSE}
+
+#5A
+
+# Definim la ruta de la carpeta que conté els fitxers XLSX
+ruta <- "../Data/Còpies Montse 5A"
+
+# Llista de fitxers XLSX a la carpeta
+fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
+
+# Llegim tots els fitxers XLSX amb la funció lapply()
+llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 2))
+
+df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
+df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
+df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
+
+dftotal <- rbind(df1,
+            df2,
+            df3)
+
+dftotal$Comentaris %<>% tolower()
+dftotal <- filter(dftotal, !is.na(Comentaris))
+
+
+#5B
+
+# Definim la ruta de la carpeta que conté els fitxers XLSX
+ruta <- "../Data/Còpies Montse 5B"
+
+# Llista de fitxers XLSX a la carpeta
+fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
+
+# Llegim tots els fitxers XLSX amb la funció lapply()
+llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 2))
+
+df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
+df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
+df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
+
+df1 <- rbind(df1,
+            df2,
+            df3)
+
+df1$Comentaris %<>% tolower()
+df1 <- filter(df1, !is.na(Comentaris))
+
+dftotal <- rbind(dftotal, df1)
+
+#5C
+
+# Definim la ruta de la carpeta que conté els fitxers XLSX
+ruta <- "../Data/Còpies Montse 5C"
+
+# Llista de fitxers XLSX a la carpeta
+fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
+
+# Llegim tots els fitxers XLSX amb la funció lapply()
+llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 2))
+
+df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
+df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
+df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
+
+df1 <- rbind(df1,
+            df2,
+            df3)
+
+df1$Comentaris %<>% tolower()
+df1 <- filter(df1, !is.na(Comentaris))
+
+dftotal <- rbind(dftotal, df1)
+
+#5D
+
+# Definim la ruta de la carpeta que conté els fitxers XLSX
+ruta <- "../Data/Còpies Montse 5D"
+
+# Llista de fitxers XLSX a la carpeta
+fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
+
+# Llegim tots els fitxers XLSX amb la funció lapply()
+llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 2))
+
+df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
+df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
+df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
+
+df1 <- rbind(df1,
+            df2,
+            df3)
+
+df1$Comentaris %<>% tolower()
+df1 <- filter(df1, !is.na(Comentaris))
+
+dftotal <- rbind(dftotal, df1)
+
+```
+
+
+## Separar Paraules
+```{r echo=FALSE}
+# Separem els comentaris en paraules i afegim-les a una nova columna del data frame
+df1_words <- dftotal %>%
+  unnest_tokens(word, Comentaris)
+
+# Eliminem les paraules no significatives per a l'anàlisi, com ara articles, preposicions, etc. (les anomenades "stopwords")
+
+df1_words <- df1_words %>% 
+  dplyr ::filter(!word %in% stop_words)
+
+# Contem la freqüència de cada paraula
+word_freq <- df1_words %>%
+  count(word, sort = TRUE)
+
+# Transformem la variable word en un factor ordenat segons la freqüència
+word_freq <- word_freq %>%
+  mutate(word = fct_reorder(word, n))
+
+```
+
+- Número de paraules uniques **`r nrow(word_freq)`**
+
+
+## Paraules mes freqüents
+
+```{r echo=FALSE}
+# Visualitzem les paraules més freqüents amb ggplot2
+ggplot(head(word_freq,15), aes(x = word, y = n)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Montse 5A",
+       x = "", 
+       y = "") +
+  theme(plot.title = element_text(size = 12),         
+        axis.title = element_text(size = 10),         
+        axis.text = element_text(size = 8),         
+        legend.title = element_text(size = 10),         
+        legend.text = element_text(size = 8),         
+        plot.margin = unit(c(1, 1, 1, 1), "cm"),         
+        legend.position = "right",         
+        legend.direction = "vertical")
+
+
+```
+
+## Núvol de paraules
+
+```{r echo=FALSE}
+
+
+
+# Definir els colors
+my_colors <- brewer.pal(n = 8, name = "Dark2")
+
+# Crear el núvol de paraules amb colors
+wordcloud(words = word_freq$word, 
+          freq = word_freq$n, 
+          max.words = 50, 
+          random.order = FALSE,
+          colors = my_colors)
+
+```
+
+
+
+
+
+
+
+
+
+
+
