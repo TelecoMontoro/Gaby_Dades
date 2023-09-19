@@ -1,16 +1,13 @@
 ---
-title: "<span style='font-size:125%;color:#CA1010'>Edul@b</span style='color:#CA1010'>"
-subtitle: "Comentaris de 5è tots els excels 1Ronda vs 2Ronda"
+title: "<span style='font-size:125%;color:#CA1010'>Dades Educació</span style='color:#CA1010'>"
+subtitle: "I'll be back"
 author:
-  - Marcos Montoro^[telecomontoro@uoc.edu] - Estel Paloma Cisa^[epaloma@uoc.edu]
+  - Marcos Montoro^[telecomontoro@uoc.edu] - Gaby Ramirez
 
 date: "`r Sys.Date()`"
-output:
-  pdf_document:
-    toc: yes
-    toc_depth: '4'
+output: html_document
     
-knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0("../Informe Comentaris/",format(Sys.Date(),"%Y-%m-%d"),"_Informe_Comentaris 5e tot 1Ronda vs 2Ronda.pdf")) })
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0("../Informe Comentaris/",format(Sys.Date(),"%Y-%m-%d"),"_Informe.html")) })
 
 
 
@@ -66,246 +63,158 @@ library(sentimentr)
 library(readxl)
 library(xlsx)
 library(wordcloud)
-
-stop_words <- read.table("https://raw.githubusercontent.com/Alir3z4/stop-words/master/catalan.txt",
-                         header = FALSE, stringsAsFactors = FALSE)
-colnames(stop_words) <- "word"
-
-stop_words <- stop_words %>% 
-  mutate(word = tolower(word)) %>% 
-  pull()
+library(dplyr)
+library(DT)
 
 ```
 
 
 
-
-
-```{r, results='asis'}
-
-cat("\\newpage")
-
-```
-
-
-
-# **Pla de recerca Doctorat industrial Estel Paloma i Cisa**
-
-![](../Imatges/edulab_blog_960x115.jpg){width=800 height=80}
-
-
-Model per a l’avaluació del desenvolupament de la competència emprenedora per al foment de la sostenibilitat a l'educació obligatòria i postobligatòria
+```{r include=FALSE, warning=F, eval=T}
+library(stringr)
+library(Hmisc)
+library(data.table)
+library(lubridate)
+library(gtools)
+library(magrittr)
+library(tidyr)
+library(tidyverse)
+library(compareGroups)
+library(kableExtra)
+library(plotly)
+library(reshape2)
 
 
 
-# Teoria
+# Cargaoms crues
+df <- read.csv2("../Data/Grid view.csv", sep = ",",
+               encoding = "UTF-8")
 
-- Carregar les llibreries necessàries per a l'anàlisi de text.
-- Convertir els comentaris a minúscules.
-- Separar els comentaris en paraules i afegir-les a una nova columna del data frame.
-- Eliminar les paraules no significatives per a l'anàlisi, com ara articles, preposicions, etc. (les anomenades "stopwords").
-- Comptar la freqüència de cada paraula:
-- Visualitzar les paraules més freqüents amb ggplot2.
-
-----------------------------------
-Aquest treball es desenvolupa amb el software estadístic **R-Studio** versió 4.2.2
-----------------------------------
+df$Data.fi.prevista %<>% as.Date("%d/%m/%y")
+df$Data.inici %<>% as.Date("%d/%m/%y")
 
 
-```{r, results='asis'}
-
-cat("\\newpage")
 
 ```
 
-----------------------------------
-
-# Resum Projecte
-
-Tenim 3 excels per carpeta curs que son:
-
-- Idees i oportunitats 1a_2a ronda
-- Recursos 1a_2a Ronda
-- Passar a l_acció 1a_2a Ronda
-
-
-Els ajuntem tot i fem la comparació
-
-----------------------------------
-
-```{r, results='asis'}
-
-cat("\\newpage")
-
-```
-
-# 1r Ronda tot 5è
-
-Còpia Montse 1. 5A Idees i oportunitats 1a_2a ronda.xlsx
-
+# Anàlisi per Institut
 
 
 ```{r echo=FALSE}
-#5A
-
-# Definim la ruta de la carpeta que conté els fitxers XLSX
-ruta <- "../Data/Còpies Montse 5A"
-
-# Llista de fitxers XLSX a la carpeta
-fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
-
-# Llegim tots els fitxers XLSX amb la funció lapply()
-llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 1))
-
-df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
-df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
-df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
-
-dftotal <- rbind(df1,
-            df2,
-            df3)
-
-dftotal$Comentaris %<>% tolower()
-
-dftotal <- filter(dftotal, !is.na(Comentaris))
-
-
-#5B
-
-# Definim la ruta de la carpeta que conté els fitxers XLSX
-ruta <- "../Data/Còpies Montse 5B"
-
-# Llista de fitxers XLSX a la carpeta
-fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
-
-# Llegim tots els fitxers XLSX amb la funció lapply()
-llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 1))
-
-df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
-df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
-df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
-
-df1 <- rbind(df1,
-            df2,
-            df3)
-
-df1$Comentaris %<>% tolower()
-df1 <- dplyr ::filter(df1, !is.na(Comentaris))
-
-dftotal <- rbind(dftotal, df1)
-
-#5C
-
-# Definim la ruta de la carpeta que conté els fitxers XLSX
-ruta <- "../Data/Còpies Montse 5C"
-
-# Llista de fitxers XLSX a la carpeta
-fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
-
-# Llegim tots els fitxers XLSX amb la funció lapply()
-llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 1))
-
-df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
-df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
-df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
-
-df1 <- rbind(df1,
-            df2,
-            df3)
-
-df1$Comentaris %<>% tolower()
-df1 <- dplyr ::filter(df1, !is.na(Comentaris))
-
-dftotal <- rbind(dftotal, df1)
-
-#5D
-
-# Definim la ruta de la carpeta que conté els fitxers XLSX
-ruta <- "../Data/Còpies Montse 5D"
-
-# Llista de fitxers XLSX a la carpeta
-fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
-
-# Llegim tots els fitxers XLSX amb la funció lapply()
-llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 1))
-
-df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
-df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
-df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
-
-df1 <- rbind(df1,
-            df2,
-            df3)
-
-df1$Comentaris %<>% tolower()
-df1 <- dplyr ::filter(df1, !is.na(Comentaris))
-
-dftotal <- rbind(dftotal, df1)
+# Suposant que 'Institut' és una variable categòrica
+df %>% 
+  group_by(Institut) %>% 
+  summarise(Count = n()) %>% 
+   arrange(desc(Count)) %>% 
+  plot_ly(x = ~Institut, y = ~Count, type = 'bar', name = 'Institut') %>% 
+  layout(title = 'Anàlisi per Institut')
 
 ```
 
 
-## Separar Paraules
-```{r echo=FALSE}
-# Separem els comentaris en paraules i afegim-les a una nova columna del data frame
-df1_words <- dftotal %>%
-  unnest_tokens(word, Comentaris)
+# Anàlisi per Població
 
-# Eliminem les paraules no significatives per a l'anàlisi, com ara articles, preposicions, etc. (les anomenades "stopwords")
 
-df1_words <- df1_words %>% 
-  dplyr ::filter(!word %in% stop_words)
-
-# Contem la freqüència de cada paraula
-word_freq <- df1_words %>%
-  count(word, sort = TRUE)
-
-# Transformem la variable word en un factor ordenat segons la freqüència
-word_freq <- word_freq %>%
-  mutate(word = fct_reorder(word, n))
-
+```{r}
+df %>% 
+  group_by(Població) %>% 
+  summarise(Count = n()) %>% 
+   arrange(desc(Count)) %>% 
+  plot_ly(x = ~Població, y = ~Count, type = 'bar', name = 'Població') %>% 
+  layout(title = 'Anàlisi per Població')
 ```
 
-- Número de paraules uniques **`r nrow(word_freq)`**
 
 
-## Paraules mes freqüents
 
-```{r echo=FALSE}
-# Visualitzem les paraules més freqüents amb ggplot2
-ggplot(head(word_freq,15), aes(x = word, y = n)) +
-  geom_col() +
-  coord_flip() +
-  labs(title = "Montse 5A",
-       x = "", 
-       y = "") +
-  theme(plot.title = element_text(size = 12),         
-        axis.title = element_text(size = 10),         
-        axis.text = element_text(size = 8),         
-        legend.title = element_text(size = 10),         
-        legend.text = element_text(size = 8),         
-        plot.margin = unit(c(1, 1, 1, 1), "cm"),         
-        legend.position = "right",         
-        legend.direction = "vertical")
+
+# Anàlisi per Especialitat
+
+```{r}
+
+# Suposant que 'Especialitat' és una variable categòrica
+df %>% 
+  group_by(Especialitat) %>% 
+  summarise(Count = n()) %>% 
+   arrange(desc(Count)) %>% 
+  plot_ly(x = ~Especialitat, y = ~Count, type = 'bar', name = 'Especialitat') %>% 
+  layout(title = 'Anàlisi per Especialitat')
 
 
 ```
 
-## Núvol de paraules
 
-```{r echo=FALSE}
+# Anàlisi de Jornada
+
+```{r}
+
+
+# Suposant que 'Jornada' és una variable categòrica
+df %>% 
+  group_by(Jornada) %>% 
+  summarise(Count = n()) %>% 
+   arrange(desc(Count)) %>% 
+  plot_ly(x = ~Jornada, y = ~Count, type = 'bar', name = 'Jornada') %>% 
+  layout(title = 'Anàlisi de Jornada')
+```
 
 
 
-# Definir els colors
-my_colors <- brewer.pal(n = 8, name = "Dark2")
 
-# Crear el núvol de paraules amb colors
-wordcloud(words = word_freq$word, 
-          freq = word_freq$n, 
-          max.words = 50, 
-          random.order = FALSE,
-          colors = my_colors)
+# Anàlisi de Dates
+
+```{r}
+
+# Convertint les columnes de dates a format de data
+df$Data.inici <- as.Date(df$Data.inici)
+df$Data.fi.prevista <- as.Date(df$Data.fi.prevista)
+
+# Creant un gràfic de línia de temps
+plot_ly(df, x = ~Data.inici, y = ~Data.fi.prevista, type = 'scatter', mode = 'lines') %>% 
+  layout(title = 'Anàlisi de Dates')
+
+```
+
+
+
+# Plaçes sense cobrir especialitat
+
+Per a realitzar l'anàlisi que desitges, primer necessitarem identificar quines places han quedat sense cobrir. Suposarem que una plaça està sense cobrir si el camp Substitut.a està buit. A continuació, calcularé el nombre total de places que han sortit i el nombre de places que han quedat sense cobrir per cada especialitat. El codi seria:
+
+
+
+```{r}
+
+
+df %>%
+  group_by(Especialitat) %>%
+  summarise(
+    Places_Sortides = n(),
+    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+  ) %>%
+  arrange(desc(Places_Sortides)) %>%
+  mutate(Especialitat = factor(Especialitat, levels = Especialitat)) %>%
+  plot_ly(x = ~Especialitat, y = ~Places_Sortides, type = 'bar', name = 'Places Sortides') %>%
+  add_trace(y = ~Places_Sense_Cobrir, name = 'Places Sense Cobrir', type = 'bar') %>%
+  layout(title = 'Anàlisi de Places per Especialitat', barmode = 'group', xaxis = list(tickangle = -45))
+
+
+```
+
+
+
+```{r}
+df_analisi <- df %>%
+  group_by(Especialitat) %>%
+  summarise(
+    Places_Sortides = n(),
+    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+  ) %>%
+  arrange(desc(Places_Sortides))
+
+datatable(df_analisi, 
+          options = list(pageLength = 5, autoWidth = TRUE),
+          caption = "Anàlisi de Places per Especialitat")
 
 ```
 
@@ -314,198 +223,107 @@ wordcloud(words = word_freq$word,
 
 
 
+# Plaçes sense cobrir Institut
+
+Per a realitzar l'anàlisi que desitges, primer necessitarem identificar quines places han quedat sense cobrir. Suposarem que una plaça està sense cobrir si el camp Substitut.a està buit. A continuació, calcularé el nombre total de places que han sortit i el nombre de places que han quedat sense cobrir per cada especialitat. El codi seria:
 
 
 
+```{r}
 
 
-
-
-```{r, results='asis'}
-
-cat("\\newpage")
-
-```
-
-----------------------------------
-
-# 2r Ronda tot 5è
-
-Còpia Montse 1. 5A Idees i oportunitats 1a_2a ronda.xlsx
-
-
-
-```{r echo=FALSE}
-
-#5A
-
-# Definim la ruta de la carpeta que conté els fitxers XLSX
-ruta <- "../Data/Còpies Montse 5A"
-
-# Llista de fitxers XLSX a la carpeta
-fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
-
-# Llegim tots els fitxers XLSX amb la funció lapply()
-llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 2))
-
-df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
-df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
-df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
-
-dftotal <- rbind(df1,
-            df2,
-            df3)
-
-dftotal$Comentaris %<>% tolower()
-dftotal <- filter(dftotal, !is.na(Comentaris))
-
-
-#5B
-
-# Definim la ruta de la carpeta que conté els fitxers XLSX
-ruta <- "../Data/Còpies Montse 5B"
-
-# Llista de fitxers XLSX a la carpeta
-fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
-
-# Llegim tots els fitxers XLSX amb la funció lapply()
-llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 2))
-
-df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
-df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
-df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
-
-df1 <- rbind(df1,
-            df2,
-            df3)
-
-df1$Comentaris %<>% tolower()
-df1 <- filter(df1, !is.na(Comentaris))
-
-dftotal <- rbind(dftotal, df1)
-
-#5C
-
-# Definim la ruta de la carpeta que conté els fitxers XLSX
-ruta <- "../Data/Còpies Montse 5C"
-
-# Llista de fitxers XLSX a la carpeta
-fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
-
-# Llegim tots els fitxers XLSX amb la funció lapply()
-llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 2))
-
-df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
-df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
-df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
-
-df1 <- rbind(df1,
-            df2,
-            df3)
-
-df1$Comentaris %<>% tolower()
-df1 <- filter(df1, !is.na(Comentaris))
-
-dftotal <- rbind(dftotal, df1)
-
-#5D
-
-# Definim la ruta de la carpeta que conté els fitxers XLSX
-ruta <- "../Data/Còpies Montse 5D"
-
-# Llista de fitxers XLSX a la carpeta
-fitxers <- list.files(ruta, pattern = ".xlsx$", full.names = TRUE)
-
-# Llegim tots els fitxers XLSX amb la funció lapply()
-llista_fitxers <- lapply(fitxers, function(x) read_excel(x, sheet = 2))
-
-df1 <- data.frame("Comentaris" = llista_fitxers[[1]][["Comentaris"]])
-df2 <- data.frame("Comentaris" = llista_fitxers[[2]][["Comentaris"]])
-df3 <- data.frame("Comentaris" = llista_fitxers[[3]][["Comentaris"]])
-
-df1 <- rbind(df1,
-            df2,
-            df3)
-
-df1$Comentaris %<>% tolower()
-df1 <- filter(df1, !is.na(Comentaris))
-
-dftotal <- rbind(dftotal, df1)
-
-```
-
-
-## Separar Paraules
-```{r echo=FALSE}
-# Separem els comentaris en paraules i afegim-les a una nova columna del data frame
-df1_words <- dftotal %>%
-  unnest_tokens(word, Comentaris)
-
-# Eliminem les paraules no significatives per a l'anàlisi, com ara articles, preposicions, etc. (les anomenades "stopwords")
-
-df1_words <- df1_words %>% 
-  dplyr ::filter(!word %in% stop_words)
-
-# Contem la freqüència de cada paraula
-word_freq <- df1_words %>%
-  count(word, sort = TRUE)
-
-# Transformem la variable word en un factor ordenat segons la freqüència
-word_freq <- word_freq %>%
-  mutate(word = fct_reorder(word, n))
-
-```
-
-- Número de paraules uniques **`r nrow(word_freq)`**
-
-
-## Paraules mes freqüents
-
-```{r echo=FALSE}
-# Visualitzem les paraules més freqüents amb ggplot2
-ggplot(head(word_freq,15), aes(x = word, y = n)) +
-  geom_col() +
-  coord_flip() +
-  labs(title = "Montse 5A",
-       x = "", 
-       y = "") +
-  theme(plot.title = element_text(size = 12),         
-        axis.title = element_text(size = 10),         
-        axis.text = element_text(size = 8),         
-        legend.title = element_text(size = 10),         
-        legend.text = element_text(size = 8),         
-        plot.margin = unit(c(1, 1, 1, 1), "cm"),         
-        legend.position = "right",         
-        legend.direction = "vertical")
+df %>%
+  group_by(Institut) %>%
+  summarise(
+    Places_Sortides = n(),
+    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+  ) %>%
+  arrange(desc(Places_Sortides)) %>%
+  mutate(Especialitat = factor(Institut, levels = Institut)) %>%
+  plot_ly(x = ~Institut, y = ~Places_Sortides, type = 'bar', name = 'Places Sortides') %>%
+  add_trace(y = ~Places_Sense_Cobrir, name = 'Places Sense Cobrir', type = 'bar') %>%
+  layout(title = 'Anàlisi de Places per Institut', barmode = 'group', xaxis = list(tickangle = -45))
 
 
 ```
 
-## Núvol de paraules
 
-```{r echo=FALSE}
+```{r}
+df_analisi <- df %>%
+  group_by(Institut) %>%
+  summarise(
+    Places_Sortides = n(),
+    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+  ) %>%
+  arrange(desc(Places_Sortides))
+
+datatable(df_analisi, 
+          options = list(pageLength = 5, autoWidth = TRUE),
+          caption = "Anàlisi de Places per Institut")
+
+```
+
+# Plaçes sense cobrir Població
+
+Per a realitzar l'anàlisi que desitges, primer necessitarem identificar quines places han quedat sense cobrir. Suposarem que una plaça està sense cobrir si el camp Substitut.a està buit. A continuació, calcularé el nombre total de places que han sortit i el nombre de places que han quedat sense cobrir per cada especialitat. El codi seria:
 
 
 
-# Definir els colors
-my_colors <- brewer.pal(n = 8, name = "Dark2")
+```{r}
 
-# Crear el núvol de paraules amb colors
-wordcloud(words = word_freq$word, 
-          freq = word_freq$n, 
-          max.words = 50, 
-          random.order = FALSE,
-          colors = my_colors)
+
+df %>%
+  group_by(Població) %>%
+  summarise(
+    Places_Sortides = n(),
+    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+  ) %>%
+  arrange(desc(Places_Sortides)) %>%
+  mutate(Especialitat = factor(Població, levels = Població)) %>%
+  plot_ly(x = ~Població, y = ~Places_Sortides, type = 'bar', name = 'Places Sortides') %>%
+  add_trace(y = ~Places_Sense_Cobrir, name = 'Places Sense Cobrir', type = 'bar') %>%
+  layout(title = 'Anàlisi de Places per Població', barmode = 'group', xaxis = list(tickangle = -45))
+
+
+```
+
+```{r}
+df_analisi <- df %>%
+  group_by(Població) %>%
+  summarise(
+    Places_Sortides = n(),
+    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+  ) %>%
+  arrange(desc(Places_Sortides))
+
+datatable(df_analisi, 
+          options = list(pageLength = 5, autoWidth = TRUE),
+          caption = "Anàlisi de Places per Institut")
 
 ```
 
 
 
 
+#
 
 
 
 
+```{r}
+
+analisi_municipi <- df %>%
+  group_by(Població) %>%
+  summarise(
+    Places_Sortides = n(),
+    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE),
+    Proporcio_Sense_Cobrir = Places_Sense_Cobrir / Places_Sortides
+  ) %>%
+  arrange(desc(Proporcio_Sense_Cobrir))
+
+analisi_municipi
+
+```
 
 
 
