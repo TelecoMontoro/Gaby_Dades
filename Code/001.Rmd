@@ -116,12 +116,17 @@ df %>%
 
 
 ```{r}
-df %>% 
+tt <- df %>% 
   group_by(Població) %>% 
   summarise(Count = n()) %>% 
-   arrange(desc(Count)) %>% 
-  plot_ly(x = ~Població, y = ~Count, type = 'bar', name = 'Població') %>% 
+   arrange(desc(Count)) 
+
+
+
+  plot_ly(tt, 
+          x = ~Població, y = ~Count, type = 'bar', name = 'Població') %>% 
   layout(title = 'Anàlisi per Població')
+  
 ```
 
 
@@ -142,6 +147,11 @@ df %>%
 
 
 ```
+
+
+
+
+
 
 
 # Anàlisi de Jornada
