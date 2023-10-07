@@ -17,10 +17,13 @@ knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = e
 
 ```{css sidenote, echo = FALSE}
 .main-container {
-  margin-left: 50px;       # 0px = max. to the left (with default padding)
-  margin-right: 50px;       
+  width: 98%;
+  margin-left: 1%;
+  margin-right: 1%;
 }
-}
+
+
+
 #TOC {
   z-index: 2;
  }
@@ -83,67 +86,116 @@ library(compareGroups)
 library(kableExtra)
 library(plotly)
 library(reshape2)
-
-
-
-# Cargaoms crues
-df <- read.csv2("../Data/Grid view.csv", sep = ",",
-               encoding = "UTF-8")
-
-df$Data.fi.prevista %<>% as.Date("%d/%m/%y")
-df$Data.inici %<>% as.Date("%d/%m/%y")
-
-
-
 ```
-
-# Anàlisi per Institut
-
-
-```{r echo=FALSE}
-# Suposant que 'Institut' és una variable categòrica
-df %>% 
-  group_by(Institut) %>% 
-  summarise(Count = n()) %>% 
-   arrange(desc(Count)) %>% 
-  plot_ly(x = ~Institut, y = ~Count, type = 'bar', name = 'Institut') %>% 
-  layout(title = 'Anàlisi per Institut')
-
-```
-
-
-# Anàlisi per Població
-
 
 ```{r}
-tt <- df %>% 
-  group_by(Població) %>% 
-  summarise(Count = n()) %>% 
-   arrange(desc(Count)) 
 
 
 
-  plot_ly(tt, 
-          x = ~Població, y = ~Count, type = 'bar', name = 'Població') %>% 
-  layout(title = 'Anàlisi per Població')
+
+read_txt_to_df <- function(file_path) {
+  # Llegir totes les línies del fitxer
+  lines <- readLines(file_path)
   
+  # Crear un dataframe buit amb les columnes especificades
+  df <- data.frame(Centre = character(), Especialitat = character(), Jornada = character(), Data_Ini = character(), Data_fi = character(), Substitut = character(), stringsAsFactors=FALSE)
+  
+  for (i in 1:length(lines)) {
+    if (grepl("^Institut", lines[i])) {
+      centre <- unlist(strsplit(lines[i], "\t"))[1]
+      especialitat <- unlist(strsplit(lines[i], "\t"))[2]
+      jornada <- unlist(strsplit(lines[i], "\t"))[3]
+      data_ini <- unlist(strsplit(lines[i], "\t"))[4]
+      data_fi <- unlist(strsplit(lines[i], "\t"))[5]
+      # Buscar el substitut en la línia següent que comença amb "Substitut/a:"
+      if (i+1 <= length(lines) && grepl("^Substitut/a:", lines[i+1])) {
+        substitut <- gsub("Substitut/a:\\t?", "", lines[i+1])
+      } else {
+        substitut <- NA
+      }
+      # Afegir les dades al dataframe
+      df <- rbind(df, data.frame(Institut = centre, 
+                                 Especialitat = especialitat, 
+                                 Jornada = jornada, 
+                                 Data_Ini = data_ini, 
+                                 Data_fi = data_fi, 
+                                 Substitut = substitut))
+    }
+  }
+  
+  return(df)
+}
+
+# Obtenir una llista de tots els fitxers .txt en el directori 'Data'
+file_list <- list.files(path = "../Data", pattern = "\\.txt$", full.names = TRUE)
+
+# Crear un llistat on emmagatzemarem els dataframes de cada fitxer
+df_list <- list()
+
+# Iterar sobre cada fitxer i aplicar la funció
+for (file in file_list) {
+  df <- read_txt_to_df(file)
+  df_list[[file]] <- df
+}
+
+# Si vols combinar tots els dataframes en un sol dataframe (suposant que tots tenen la mateixa estructura)
+df <- do.call(rbind, df_list)
+rownames(df) <- 1:nrow(df)
+
+
+
+# Extractar el text dins dels parèntesis en la columna 'Institut'
+df$Poblacio <- str_extract(df$Institut, "\\(([^)]+)\\)")
+
+
+# Eliminar els caràcters '(' i ')' de la columna 'Poblacio'
+df$Poblacio <- str_replace_all(df$Poblacio, "[()]", "")
+
+# Eliminar la informació dins dels parèntesis (incloent-hi els parèntesis) de la columna 'Centre'
+df$Institut <- str_replace(df$Institut, "\\s*\\([^)]+\\)", "")
+
+
+
+
+
+# Convertir les columnes 'Data_Ini' i 'Data_fi' a format de data
+df$Data_Ini <- as.Date(df$Data_Ini, format = "%d/%m/%y")
+df$Data_fi <- as.Date(df$Data_fi, format = "%d/%m/%y")
+
+df$Substitut[df$Substitut == ""] <- NA
+
+
+
 ```
 
 
 
 
 
-# Anàlisi per Especialitat
+
+
+
+
+# Plaçes sense cobrir Institut
+
 
 ```{r}
 
-# Suposant que 'Especialitat' és una variable categòrica
-df %>% 
-  group_by(Especialitat) %>% 
-  summarise(Count = n()) %>% 
-   arrange(desc(Count)) %>% 
-  plot_ly(x = ~Especialitat, y = ~Count, type = 'bar', name = 'Especialitat') %>% 
-  layout(title = 'Anàlisi per Especialitat')
+
+df_analisi <- df %>%
+  group_by(Institut) %>%
+  summarise(
+    Places_Sortides = n(),
+    Places_Sense_Cobrir = sum(is.na(Substitut), na.rm = TRUE)
+  ) %>%
+  arrange(desc(Places_Sortides)) %>%
+  mutate(Institut_ordered = factor(Institut, levels = Institut))
+
+df_analisi %>%
+  plot_ly(x = ~Institut_ordered, y = ~Places_Sortides, type = 'bar', name = 'Places Sortides') %>%
+  add_trace(y = ~Places_Sense_Cobrir, name = 'Places Sense Cobrir', type = 'bar') %>%
+  layout(title = 'Anàlisi de Places per Institut', barmode = 'group', xaxis = list(tickangle = -45))
+
 
 
 ```
@@ -153,43 +205,86 @@ df %>%
 
 
 
-
-# Anàlisi de Jornada
 
 ```{r}
 
 
-# Suposant que 'Jornada' és una variable categòrica
-df %>% 
-  group_by(Jornada) %>% 
-  summarise(Count = n()) %>% 
-   arrange(desc(Count)) %>% 
-  plot_ly(x = ~Jornada, y = ~Count, type = 'bar', name = 'Jornada') %>% 
-  layout(title = 'Anàlisi de Jornada')
+# Taules per a cada tipus de Jornada
+df_sencera <- df %>%
+  filter(Jornada == "Sencera") %>%
+  group_by(Institut) %>%
+  summarise(
+    Places_Sortides_Sencera = n(),
+    Places_Sense_Cobrir_Sencera = sum(is.na(Substitut), na.rm = TRUE)
+  ) %>%
+  mutate(
+    Proporcio_Sencera = Places_Sense_Cobrir_Sencera / Places_Sortides_Sencera,
+    Places_Sense_Cobrir_Sencera = paste0(Places_Sense_Cobrir_Sencera, " (", scales::percent(Proporcio_Sencera, accuracy = 1), ")")
+  )
+
+df_mig <- df %>%
+  filter(Jornada == "0,50") %>%
+  group_by(Institut) %>%
+  summarise(
+    Places_Sortides_Mig = n(),
+    Places_Sense_Cobrir_Mig = sum(is.na(Substitut), na.rm = TRUE)
+  ) %>%
+  mutate(
+    Proporcio_Mig = Places_Sense_Cobrir_Mig / Places_Sortides_Mig,
+    Places_Sense_Cobrir_Mig = paste0(Places_Sense_Cobrir_Mig, " (", scales::percent(Proporcio_Mig, accuracy = 1), ")")
+  )
+
+# Unir les taules
+df_analisi <- full_join(df_sencera, df_mig, by = "Institut") %>%
+  mutate(
+    Places_Sortides_Sencera = coalesce(Places_Sortides_Sencera, 0),
+    Places_Sense_Cobrir_Sencera = coalesce(Places_Sense_Cobrir_Sencera, "0 (0%)"),
+    Places_Sortides_Mig = coalesce(Places_Sortides_Mig, 0),
+    Places_Sense_Cobrir_Mig = coalesce(Places_Sense_Cobrir_Mig, "0 (0%)")
+  )
+
+# Eliminar columnes de proporcions
+df_analisi$Proporcio_Sencera <- NULL
+df_analisi$Proporcio_Mig <- NULL
+
+df_analisi$Total_Ofertada <- df_analisi$Places_Sortides_Sencera + df_analisi$Places_Sortides_Mig
+# Extreu els números de les columnes i converteix-los en numèrics
+df_analisi <- df_analisi %>%
+  mutate(
+    Numeric_Sense_Cobrir_Sencera = as.numeric(str_extract(Places_Sense_Cobrir_Sencera, "^[0-9]+")),
+    Numeric_Sense_Cobrir_Mig = as.numeric(str_extract(Places_Sense_Cobrir_Mig, "^[0-9]+"))
+  )
+
+# Suma les columnes i desa el resultat a Sense_Cobrir
+df_analisi$Sense_Cobrir <- df_analisi$Numeric_Sense_Cobrir_Sencera + df_analisi$Numeric_Sense_Cobrir_Mig
+df_analisi$Sense_Cobrir <- paste0(df_analisi$Sense_Cobrir , " (", scales::percent(df_analisi$Sense_Cobrir / df_analisi$Total_Ofertada, accuracy = 1), ")")
+
+# (Opcional) Pots eliminar les columnes intermèdies si no les necessites
+df_analisi$Numeric_Sense_Cobrir_Sencera <- NULL
+df_analisi$Numeric_Sense_Cobrir_Mig <- NULL
+
+datatable(df_analisi, 
+          options = list(pageLength = 5, autoWidth = TRUE),
+          caption = "Anàlisi de Places per Institut")
+
+
+write.csv2(df_analisi,
+           "../Informe comentaris/Instituts.csv",
+           row.names =  F,
+            fileEncoding = "ISO-8859-1")
+
+
 ```
 
 
 
 
-# Anàlisi de Dates
 
-```{r}
 
-# Convertint les columnes de dates a format de data
-df$Data.inici <- as.Date(df$Data.inici)
-df$Data.fi.prevista <- as.Date(df$Data.fi.prevista)
-
-# Creant un gràfic de línia de temps
-plot_ly(df, x = ~Data.inici, y = ~Data.fi.prevista, type = 'scatter', mode = 'lines') %>% 
-  layout(title = 'Anàlisi de Dates')
-
-```
 
 
 
 # Plaçes sense cobrir especialitat
-
-Per a realitzar l'anàlisi que desitges, primer necessitarem identificar quines places han quedat sense cobrir. Suposarem que una plaça està sense cobrir si el camp Substitut.a està buit. A continuació, calcularé el nombre total de places que han sortit i el nombre de places que han quedat sense cobrir per cada especialitat. El codi seria:
 
 
 
@@ -200,7 +295,7 @@ df %>%
   group_by(Especialitat) %>%
   summarise(
     Places_Sortides = n(),
-    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+    Places_Sense_Cobrir = sum(is.na(Substitut), na.rm = TRUE)
   ) %>%
   arrange(desc(Places_Sortides)) %>%
   mutate(Especialitat = factor(Especialitat, levels = Especialitat)) %>%
@@ -214,68 +309,84 @@ df %>%
 
 
 ```{r}
-df_analisi <- df %>%
+
+
+# Taules per a cada tipus de Jornada
+df_sencera <- df %>%
+  filter(Jornada == "Sencera") %>%
   group_by(Especialitat) %>%
   summarise(
-    Places_Sortides = n(),
-    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+    Places_Sortides_Sencera = n(),
+    Places_Sense_Cobrir_Sencera = sum(is.na(Substitut), na.rm = TRUE)
   ) %>%
-  arrange(desc(Places_Sortides))
+  mutate(
+    Proporcio_Sencera = Places_Sense_Cobrir_Sencera / Places_Sortides_Sencera,
+    Places_Sense_Cobrir_Sencera = paste0(Places_Sense_Cobrir_Sencera, " (", scales::percent(Proporcio_Sencera, accuracy = 1), ")")
+  )
+
+df_mig <- df %>%
+  filter(Jornada == "0,50") %>%
+  group_by(Especialitat) %>%
+  summarise(
+    Places_Sortides_Mig = n(),
+    Places_Sense_Cobrir_Mig = sum(is.na(Substitut), na.rm = TRUE)
+  ) %>%
+  mutate(
+    Proporcio_Mig = Places_Sense_Cobrir_Mig / Places_Sortides_Mig,
+    Places_Sense_Cobrir_Mig = paste0(Places_Sense_Cobrir_Mig, " (", scales::percent(Proporcio_Mig, accuracy = 1), ")")
+  )
+
+# Unir les taules
+df_analisi <- full_join(df_sencera, df_mig, by = "Especialitat") %>%
+  mutate(
+    Places_Sortides_Sencera = coalesce(Places_Sortides_Sencera, 0),
+    Places_Sense_Cobrir_Sencera = coalesce(Places_Sense_Cobrir_Sencera, "0 (0%)"),
+    Places_Sortides_Mig = coalesce(Places_Sortides_Mig, 0),
+    Places_Sense_Cobrir_Mig = coalesce(Places_Sense_Cobrir_Mig, "0 (0%)")
+  )
+
+# Eliminar columnes de proporcions
+df_analisi$Proporcio_Sencera <- NULL
+df_analisi$Proporcio_Mig <- NULL
+
+df_analisi$Total_Ofertada <- df_analisi$Places_Sortides_Sencera + df_analisi$Places_Sortides_Mig
+# Extreu els números de les columnes i converteix-los en numèrics
+df_analisi <- df_analisi %>%
+  mutate(
+    Numeric_Sense_Cobrir_Sencera = as.numeric(str_extract(Places_Sense_Cobrir_Sencera, "^[0-9]+")),
+    Numeric_Sense_Cobrir_Mig = as.numeric(str_extract(Places_Sense_Cobrir_Mig, "^[0-9]+"))
+  )
+
+# Suma les columnes i desa el resultat a Sense_Cobrir
+df_analisi$Sense_Cobrir <- df_analisi$Numeric_Sense_Cobrir_Sencera + df_analisi$Numeric_Sense_Cobrir_Mig
+df_analisi$Sense_Cobrir <- paste0(df_analisi$Sense_Cobrir , " (", scales::percent(df_analisi$Sense_Cobrir / df_analisi$Total_Ofertada, accuracy = 1), ")")
+
+# (Opcional) Pots eliminar les columnes intermèdies si no les necessites
+df_analisi$Numeric_Sense_Cobrir_Sencera <- NULL
+df_analisi$Numeric_Sense_Cobrir_Mig <- NULL
 
 datatable(df_analisi, 
           options = list(pageLength = 5, autoWidth = TRUE),
           caption = "Anàlisi de Places per Especialitat")
 
-```
 
 
-
-
-
-
-# Plaçes sense cobrir Institut
-
-Per a realitzar l'anàlisi que desitges, primer necessitarem identificar quines places han quedat sense cobrir. Suposarem que una plaça està sense cobrir si el camp Substitut.a està buit. A continuació, calcularé el nombre total de places que han sortit i el nombre de places que han quedat sense cobrir per cada especialitat. El codi seria:
-
-
-
-```{r}
-
-
-df %>%
-  group_by(Institut) %>%
-  summarise(
-    Places_Sortides = n(),
-    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
-  ) %>%
-  arrange(desc(Places_Sortides)) %>%
-  mutate(Especialitat = factor(Institut, levels = Institut)) %>%
-  plot_ly(x = ~Institut, y = ~Places_Sortides, type = 'bar', name = 'Places Sortides') %>%
-  add_trace(y = ~Places_Sense_Cobrir, name = 'Places Sense Cobrir', type = 'bar') %>%
-  layout(title = 'Anàlisi de Places per Institut', barmode = 'group', xaxis = list(tickangle = -45))
+write.csv2(df_analisi,
+           "../Informe comentaris/Especialitat.csv",
+           row.names =  F,
+            fileEncoding = "ISO-8859-1")
 
 
 ```
 
 
-```{r}
-df_analisi <- df %>%
-  group_by(Institut) %>%
-  summarise(
-    Places_Sortides = n(),
-    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
-  ) %>%
-  arrange(desc(Places_Sortides))
 
-datatable(df_analisi, 
-          options = list(pageLength = 5, autoWidth = TRUE),
-          caption = "Anàlisi de Places per Institut")
 
-```
+
+
 
 # Plaçes sense cobrir Població
 
-Per a realitzar l'anàlisi que desitges, primer necessitarem identificar quines places han quedat sense cobrir. Suposarem que una plaça està sense cobrir si el camp Substitut.a està buit. A continuació, calcularé el nombre total de places que han sortit i el nombre de places que han quedat sense cobrir per cada especialitat. El codi seria:
 
 
 
@@ -283,14 +394,14 @@ Per a realitzar l'anàlisi que desitges, primer necessitarem identificar quines 
 
 
 df %>%
-  group_by(Població) %>%
+  group_by(Poblacio) %>%
   summarise(
     Places_Sortides = n(),
-    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+    Places_Sense_Cobrir = sum(is.na(Substitut), na.rm = TRUE)
   ) %>%
   arrange(desc(Places_Sortides)) %>%
-  mutate(Especialitat = factor(Població, levels = Població)) %>%
-  plot_ly(x = ~Població, y = ~Places_Sortides, type = 'bar', name = 'Places Sortides') %>%
+  mutate(Especialitat = factor(Poblacio, levels = Poblacio)) %>%
+  plot_ly(x = ~Poblacio, y = ~Places_Sortides, type = 'bar', name = 'Places Sortides') %>%
   add_trace(y = ~Places_Sense_Cobrir, name = 'Places Sense Cobrir', type = 'bar') %>%
   layout(title = 'Anàlisi de Places per Població', barmode = 'group', xaxis = list(tickangle = -45))
 
@@ -298,42 +409,145 @@ df %>%
 ```
 
 ```{r}
-df_analisi <- df %>%
-  group_by(Població) %>%
+
+
+# Taules per a cada tipus de Jornada
+df_sencera <- df %>%
+  filter(Jornada == "Sencera") %>%
+  group_by(Poblacio) %>%
   summarise(
-    Places_Sortides = n(),
-    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE)
+    Places_Sortides_Sencera = n(),
+    Places_Sense_Cobrir_Sencera = sum(is.na(Substitut), na.rm = TRUE)
   ) %>%
-  arrange(desc(Places_Sortides))
+  mutate(
+    Proporcio_Sencera = Places_Sense_Cobrir_Sencera / Places_Sortides_Sencera,
+    Places_Sense_Cobrir_Sencera = paste0(Places_Sense_Cobrir_Sencera, " (", scales::percent(Proporcio_Sencera, accuracy = 1), ")")
+  )
+
+df_mig <- df %>%
+  filter(Jornada == "0,50") %>%
+  group_by(Poblacio) %>%
+  summarise(
+    Places_Sortides_Mig = n(),
+    Places_Sense_Cobrir_Mig = sum(is.na(Substitut), na.rm = TRUE)
+  ) %>%
+  mutate(
+    Proporcio_Mig = Places_Sense_Cobrir_Mig / Places_Sortides_Mig,
+    Places_Sense_Cobrir_Mig = paste0(Places_Sense_Cobrir_Mig, " (", scales::percent(Proporcio_Mig, accuracy = 1), ")")
+  )
+
+# Unir les taules
+df_analisi <- full_join(df_sencera, df_mig, by = "Poblacio") %>%
+  mutate(
+    Places_Sortides_Sencera = coalesce(Places_Sortides_Sencera, 0),
+    Places_Sense_Cobrir_Sencera = coalesce(Places_Sense_Cobrir_Sencera, "0 (0%)"),
+    Places_Sortides_Mig = coalesce(Places_Sortides_Mig, 0),
+    Places_Sense_Cobrir_Mig = coalesce(Places_Sense_Cobrir_Mig, "0 (0%)")
+  )
+
+# Eliminar columnes de proporcions
+df_analisi$Proporcio_Sencera <- NULL
+df_analisi$Proporcio_Mig <- NULL
+
+df_analisi$Total_Ofertada <- df_analisi$Places_Sortides_Sencera + df_analisi$Places_Sortides_Mig
+# Extreu els números de les columnes i converteix-los en numèrics
+df_analisi <- df_analisi %>%
+  mutate(
+    Numeric_Sense_Cobrir_Sencera = as.numeric(str_extract(Places_Sense_Cobrir_Sencera, "^[0-9]+")),
+    Numeric_Sense_Cobrir_Mig = as.numeric(str_extract(Places_Sense_Cobrir_Mig, "^[0-9]+"))
+  )
+
+# Suma les columnes i desa el resultat a Sense_Cobrir
+df_analisi$Sense_Cobrir <- df_analisi$Numeric_Sense_Cobrir_Sencera + df_analisi$Numeric_Sense_Cobrir_Mig
+df_analisi$Sense_Cobrir <- paste0(df_analisi$Sense_Cobrir , " (", scales::percent(df_analisi$Sense_Cobrir / df_analisi$Total_Ofertada, accuracy = 1), ")")
+
+# (Opcional) Pots eliminar les columnes intermèdies si no les necessites
+df_analisi$Numeric_Sense_Cobrir_Sencera <- NULL
+df_analisi$Numeric_Sense_Cobrir_Mig <- NULL
 
 datatable(df_analisi, 
           options = list(pageLength = 5, autoWidth = TRUE),
-          caption = "Anàlisi de Places per Institut")
+          caption = "Anàlisi de Places per Població")
+
+
+
+write.csv2(df_analisi,
+           "../Informe comentaris/Població.csv",
+           row.names =  F,
+            fileEncoding = "ISO-8859-1")
+
 
 ```
 
 
 
 
-#
 
+
+
+
+
+
+
+
+
+
+
+# Plaçes sense cobrir Per Jornada
 
 
 
 ```{r}
 
-analisi_municipi <- df %>%
-  group_by(Població) %>%
+
+df %>%
+  group_by(Jornada) %>%
   summarise(
     Places_Sortides = n(),
-    Places_Sense_Cobrir = sum(Substitut.a == "", na.rm = TRUE),
-    Proporcio_Sense_Cobrir = Places_Sense_Cobrir / Places_Sortides
+    Places_Sense_Cobrir = sum(is.na(Substitut), na.rm = TRUE)
   ) %>%
-  arrange(desc(Proporcio_Sense_Cobrir))
+  arrange(desc(Places_Sortides)) %>%
+  mutate(Especialitat = factor(Jornada, levels = Jornada)) %>%
+  plot_ly(x = ~Jornada, y = ~Places_Sortides, type = 'bar', name = 'Places Sortides') %>%
+  add_trace(y = ~Places_Sense_Cobrir, name = 'Places Sense Cobrir', type = 'bar') %>%
+  layout(title = 'Anàlisi de Places per Jornada', barmode = 'group', xaxis = list(tickangle = -45))
 
-analisi_municipi
 
 ```
+
+```{r}
+df_analisi <- df %>%
+  group_by(Jornada) %>%
+  summarise(
+    Places_Sortides = n(),
+    Places_Sense_Cobrir = sum(is.na(Substitut), na.rm = TRUE)
+  ) %>%
+  mutate(
+    Proporcio = Places_Sense_Cobrir / Places_Sortides,
+    Places_Sense_Cobrir = paste0(Places_Sense_Cobrir, " (", scales::percent(Proporcio, accuracy = 1), ")")
+  ) %>%
+  arrange(desc(Places_Sortides))
+
+df_analisi$Proporcio <- NULL
+
+datatable(df_analisi, 
+          options = list(pageLength = 5, autoWidth = TRUE),
+          caption = "Anàlisi de Places per Jornada")
+
+
+write.csv2(df_analisi,
+           "../Informe comentaris/Jornada.csv",
+           row.names =  F,
+            fileEncoding = "ISO-8859-1")
+
+```
+
+
+
+
+
+
+
 
 
 
