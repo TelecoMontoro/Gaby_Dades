@@ -126,20 +126,113 @@ read_txt_to_df <- function(file_path) {
   return(df)
 }
 
+
+# Definir el directori
+dir_path <- "../Data"
+
+# Llista de fitxers en el directori
+fitxers <- list.files(path = dir_path, full.names = TRUE)
+
+# Canviar l'extensió de cada fitxer
+
+for (fitxer in fitxers) {
+  # Comprovar si l'extensió no és .txt
+  if (!grepl("\\.txt$", fitxer)) {
+    nou_nom <- paste0(fitxer, ".txt") # Afegeix .txt a l'extensió actual
+    file.rename(from = fitxer, to = nou_nom)
+  }
+}
+
+
+
 # Obtenir una llista de tots els fitxers .txt en el directori 'Data'
 file_list <- list.files(path = "../Data", pattern = "\\.txt$", full.names = TRUE)
 
 # Crear un llistat on emmagatzemarem els dataframes de cada fitxer
 df_list <- list()
 
+
+ 
+#Algun fitxer esta buit?
 # Iterar sobre cada fitxer i aplicar la funció
 for (file in file_list) {
+  # Comprovar si el fitxer està buit
+  if (file.info(file)$size == 0) {
+    warning(paste("El fitxer", file, "està buit. Saltant..."))
+    next # Aquesta instrucció ara té sentit dins del bucle
+  }
+  
   df <- read_txt_to_df(file)
   df_list[[file]] <- df
 }
 
+
+
+
+# Iterar sobre cada fitxer i aplicar la funció
+for (file in file_list) {
+  # Comprovar si el fitxer està buit
+  if (file.info(file)$size == 0) {
+    warning(paste("El fitxer", file, "està buit. Saltant..."))
+    next # Aquesta instrucció ara té sentit dins del bucle
+  }
+  
+  df <- read_txt_to_df(file)
+  
+  # Només afegim el dataframe si té files (no està buit)
+  if (nrow(df) > 0) {
+    df_list[[file]] <- df
+  }
+}
+
+
+
+
 # Si vols combinar tots els dataframes en un sol dataframe (suposant que tots tenen la mateixa estructura)
 df <- do.call(rbind, df_list)
+
+
+# Extreure la part desitjada dels noms de les files
+# Funció per extreure el Servei Territorial
+# Funció per extreure el Servei Territorial
+extract_servei <- function(filename) {
+  parts <- unlist(strsplit(filename, "_"))
+  
+  if("2023" %in% parts && "Secundària" %in% parts) {
+    start_index <- which(parts == "2023") + 1
+    end_index <- which(parts == "Secundària") - 1
+    servei <- paste(parts[start_index:end_index], collapse = "_")
+    return(servei)
+  } else {
+    return(NA)
+  }
+}
+
+# Suposant que df és el teu dataframe
+df$ServeiTerritorial <- rownames(df)
+
+# Vector de palabras/frases a conservar
+to_keep <- c("Vallès_Occidental", "Terres_de_lEbre", "Tarragona", "Penedès", "Maresme_Vallès_Oriental", "Lleida", "Girona", "Consorci_Barcelona", "Catalunya_Central", "Barcelonès", "Baix_Llobregat", "Alt_Pirineu_Aran_Secundària")
+
+# Función para conservar solo las palabras/frases deseadas
+keep_word <- function(text) {
+  for (word in to_keep) {
+    if (grepl(word, text)) {
+      return(word)
+    }
+  }
+  return(NA) # Si ninguna palabra/frase coincide, retorna NA (puedes ajustar esto según lo que necesites)
+}
+
+# Aplicar la función a df$ServeiTerritorial
+df$ServeiTerritorial <- sapply(df$ServeiTerritorial, keep_word)
+
+
+
+
+table(df$ServeiTerritorial, useNA = "a")
+
+
 rownames(df) <- 1:nrow(df)
 
 
@@ -163,6 +256,13 @@ df$Data_Ini <- as.Date(df$Data_Ini, format = "%d/%m/%y")
 df$Data_fi <- as.Date(df$Data_fi, format = "%d/%m/%y")
 
 df$Substitut[df$Substitut == ""] <- NA
+
+
+
+write.csv2(df,
+           paste0("../Informe comentaris/",Sys.Date(),"Tot.csv"),
+           row.names =  F,
+            fileEncoding = "ISO-8859-1")
 
 
 
